@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<html>
+<head>
+    <title> Article </title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script>
+      $(document).ready(function(){
+        var a = sessionStorage.getItem("sent");
+        alert(a);
+      });
+    </script>
+    <link href='style/style.css' rel='stylesheet' type='text/css'>
+</head>
+<body>
+</body>
+</html>
+
+
+<!-- <!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+.node {
+  fill: #000;
+  opacity: 0.5;
+  font-family: sans-serif;
+  text-anchor: middle;
+}
+
+.link {
+  stroke: #999;
+  stroke-opacity: .05;
+}
+
+p {
+    font-family: sans-serif;
+}
+
+div {
+    overflow-y: scroll;
+    z-index: -100;
+}
+</style>
+
+<div>
+<p>To help you understand the article better, the following visualization shows the most frequent words in the article. The size of each word represents how often it occurs in the article. Hovering your mouse cursor over a word will also show you the other words near which it appears. Words with a thicker line between them appear together more often and closer together, while words with thinner lines do not occur together as often or have other words that appear between them. Please take a few moments to review this visualization. When you are done, please close the tab or window to return and complete the survey.</p>
+<div id="viz"></div>
+</div>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+
+var width = 960,
+    height = 500,
+    radius = -1,
+    ratio = 0.286; // ratio is the proportion of the display used for the text
+    
+var text_box_width = width * ratio,
+    text_box_height = height;
+    
+// used to hold the sentences in the text pane
+var sentences = null;
+
+// toggle for whether or not highlighting is locked to a given word
+var locked = false;
+var lockNode = null;
+
+// arielle: need to replace this with direct input
+d3.json("coocsC2.json", function(error, graph) {    
+  // add the text pane
+  var fo = svg.append("foreignObject")
+      .attr("width", text_box_width)
+      .attr("height", text_box_height)
+      .attr("x", width * (1.0 - ratio));
+  var fobody = fo.append("xhtml:body")
+      .attr("cx", width - text_box_width)
+      .attr("id", "container")
+      .style("overflow-y", "scroll")
+      .style("height", text_box_height.toString() + "px");
+  sentences = fobody.selectAll("span")
+      .data(graph.sents)
+      .enter()
+    .append("span")
+      .attr("class", "sentence")
+      .style({"font-family": "sans-serif", "font-size": "12px", "opacity": "0.1"})
+      .html( function(d) { return d.sent + " " } );
+});
+
+var svg = d3.select("#viz").append("svg:svg")
+    .attr("width", width)
+    .attr("height", height);
+    
+var force = d3.layout.force()
+    .gravity(0.1)
+    .charge(-300)
+    .linkDistance(125)
+    .size([width * (1.0 - ratio), height]);
+
+var linkedByIndex = {};
+
+d3.json("coocsC2.json", function(error, graph) {
+
+  var k = Math.sqrt(graph.nodes.length / (width * height));
+  
+  force
+      .nodes(graph.nodes)
+      .links(graph.links)
+      .charge(function(d) { return -10.0 * d.value / k; })
+      .gravity(50 * k)
+      .linkDistance(function(d) { return 0.5 * d.value / k; })
+      .friction(0.5)
+      .start();
+
+  var link = svg.selectAll("line.link")
+      .data(graph.links)
+    .enter().append("svg:line")
+      .attr("class", "link")
+      .style("stroke-width", function(d) { return d.value * 5; })
+      .attr("x1", function(d) { return d.source.x; })
+      .attr("y1", function(d) { return d.source.y; })
+      .attr("x2", function(d) { return d.target.x; })
+      .attr("y2", function(d) { return d.target.y; });
+
+  link.each(function(d) {
+    //console.log(d);
+    linkedByIndex[d.source.index + "," + d.target.index] = 1;
+    linkedByIndex[d.target.index + "," + d.source.index] = 1;
+  });
+
+  var node = svg.selectAll("text.node")
+      .data(graph.nodes)
+    .enter().append("svg:text")
+      .attr("class", "node")
+      .attr("x", function(d) { return d.x; })
+      .attr("y", function(d) { return d.y; })
+      .attr("font-size",function(d) { return d.value * 7.5 /*Math.sqrt(d.value * 100)*/; })
+      .style("font-weight", 100)
+      .text(function(d) { return d.name; })
+      //.style("fill", function(d) { return fill(d.group); })
+      //.style("font-family", "Impact")
+      .on("mouseover", highlight())
+      .on("mouseout", unhighlight())
+      .on("click", lockToggle())
+      .call(force.drag);
+  
+  /*node.append("svg:title")
+      .text(function(d) { return d.name; });*/
+  
+  force.on("tick", function() {
+    link.attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+    
+    node.attr("x", function(d) { return d.x = Math.max(radius, Math.min(width - radius, d.x)); })
+        .attr("y", function(d) { return d.y = Math.max(radius, Math.min(height - radius, d.y)); });
+    
+    /*
+    node.attr("x", function(d) { return d.x; })
+        .attr("y", function(d) { return d.y; });
+        */
+  
+  });
+  
+});
+
+function lockToggle() {
+  return function(i) {
+    // check to make sure this was a click and not a drag
+    if (!d3.event.defaultPrevented)
+    {
+        // lock or unlock highlighting as appropriate
+        if (locked && lockNode == i)
+        {
+            lockNode = null;
+            locked = false;
+            svg.selectAll("text.node")
+                .filter( function(d) { return d.name == i.name; } )
+              .transition()
+                .style({"opacity": 0.66, "font-weight": 100});
+        }
+        else if (!locked && lockNode == null)
+        {
+            lockNode = i;
+            locked = true;
+            svg.selectAll("text.node")
+                .filter( function(d) { return d.name == i.name; } )
+              .transition()
+                .style({"opacity": 1.0, "font-weight": 700});
+        }
+    }
+  };
+}
+
+function highlight() {
+  return function(i) {
+    if (!locked)
+    {
+        // highlight the sentences containing this word
+        var foo = sentences.filter( function(d) { return d.words.indexOf(i.name) > -1; } )
+          .transition()
+            .style("color", "red")
+            .style("opacity", 0.8);
+        
+        // highlight this node and all the nodes connected to it
+        svg.selectAll("text.node")
+            .filter(function(d) { return d.name == i.name || neighboring(i, d); } )
+          .transition()
+            .style("fill", "red")
+            .style("opacity", 0.66);
+    
+        // fade nodes not highlighted
+        svg.selectAll("text.node")
+            .filter(function(d) { return !(d.name == i.name || neighboring(i, d)); } )
+          .transition()
+            .style("fill", "#000")
+            .style("opacity", 0.25);
+    
+        // highlight the links connected to this node
+        svg.selectAll("line.link")
+            .filter(function(d) { return d.source.index == i.index || d.target.index == i.index; } )
+          .transition()
+            .style("stroke", "red")
+            .style("stroke-opacity", 0.5);
+    }
+  };
+}
+
+function unhighlight() {
+  return function(i) {
+    if (!locked)
+    {
+        // highlight the sentences containing this word
+            //.filter( function(d) { return d.words.countains(i.name); } )
+        sentences.transition()
+            .style("color", "black")
+            .style("opacity", 0.1);
+        
+        // unhighlight all nodes and restore opacity
+        svg.selectAll("text.node")
+            //.filter(function(d) { return d.name == i.name || neighboring(i, d); } )
+          .transition()
+            .style("fill", "#000")
+            .style("opacity", 0.5);
+    
+        // unhighlight the links connected to this node
+        svg.selectAll("line.link")
+            .filter(function(d) { return d.source.index == i.index || d.target.index == i.index; } )
+          .transition()
+            .style("stroke", "#fff")
+            .style("stroke-opacity", 0.9);
+    }
+  };
+}
+
+function neighboring(a, b) {
+  return linkedByIndex[a.index + "," + b.index];
+}
+
+
+</script> -->

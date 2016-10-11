@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<html>
+<head>
+    <title> Input Page </title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script> 
+        function sample(){
+            //this will set the text box id to var id;
+            var id = document.getElementById("textbox").value;
+
+            //the sessionStorage.setItem(); is the predefined function in javascript
+            //which will support for every browser that will store the sessions.
+            sessionStorage.setItem("sent", id); 
+
+            //this is to open a window in new tab
+            window.open("article.html","_blank");
+        }
+    </script>
+    <link href='style/style.css' rel='stylesheet' type='text/css'>
+</head>
+<body>
+    <div id='wrapper'>
+        <p> Welcome to &#123;insert name here&#125;. Please input the text of the article you would like to generate a word cloud for below.</p> <br>
+        <form method="get" action="article.html">
+            <textarea id="textbox"></textarea><br>
+            <input type="submit" onlick="sample()" name="Submit" value="Create Word Cloud">
+        </form>
+    </div>
+</body>
+</html>
